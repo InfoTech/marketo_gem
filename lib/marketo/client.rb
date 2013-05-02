@@ -60,7 +60,7 @@ module Rapleaf
       def initialize(savon_client, authentication_header, logger=nil)
         @client = savon_client
         @header = authentication_header
-        set_logger(logger) if logger.present?
+        set_logger(logger) if !logger.nil?
       end
 
       public
