@@ -2,7 +2,7 @@ require File.expand_path('authentication_header', File.dirname(__FILE__))
 
 module Rapleaf
   module Marketo
-    def self.new_client(access_key, secret_key, logger=nil, api_subdomain = 'na-i', api_version = '1_5', document_version = '1_4')
+    def self.new_client(access_key, secret_key, api_subdomain = 'na-i', api_version = '1_5', document_version = '1_4', logger=nil)
       client = Savon::Client.new do
         wsdl.endpoint     = "https://#{api_subdomain}.marketo.com/soap/mktows/#{api_version}"
         wsdl.document     = "http://app.marketo.com/soap/mktows/#{document_version}?WSDL"
@@ -84,6 +84,7 @@ module Rapleaf
       end
 
       def set_logger(logger)
+        @log_id = SecureRandom.uuid
         @logger = logger
       end
 
@@ -154,15 +155,11 @@ module Rapleaf
       
       def associate_cookie(lead_record, cookie)
         idnum = lead_record.idnum
-        log_info("Attempting to call marketo_gem's associate_cookie for user with id = #{idnum.to_s}...")
-        log_info("cookie = " + cookie.to_s)
-
+        
         raise 'lead record id not set' if idnum.nil?
 
         attributes = []
         attributes << {:attr_name => 'Id', :attr_type => 'string', :attr_value => idnum.to_s}
-
-        log_info("attributes = " + attributes.to_s)
 
         response = send_request("ns1:paramsSyncLead", {
             :return_lead => true,
@@ -173,6 +170,9 @@ module Rapleaf
                 },
             :marketo_cookie => cookie})
 
+        log_info("Attempting to call marketo_gem's associate_cookie for user with id = #{idnum.to_s}...")
+        log_info("cookie = " + cookie.to_s)
+        log_info("attributes = " + attributes.to_s)
         log_info("response: " + response.to_s)
 
         return LeadRecord.from_hash(response[:success_sync_lead][:result][:lead_record])
@@ -193,12 +193,12 @@ module Rapleaf
       private
 
       def log_info(message)
-        @logger.info("[#{Time.now}] INFO  " + message) if @logger
+        @logger.info("[#{@log_id}] [#{Time.now}]  INFO  " + message) if @logger
       end
 
       def log_error(e)
         if @logger
-          @logger.error("[#{Time.now}] ERROR  " + e.message)
+          @logger.error("[#{@log_id}] [#{Time.now}]  ERROR  " + e.message)
         end
       end
 
